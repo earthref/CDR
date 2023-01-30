@@ -1,0 +1,21 @@
+# Node
+node_modules
+npm-debug.log*
+
+# Scripts
+.scripts/elasticsearch/.*
+
+# Babel Distribution Files
+.dist
+
+# Settings
+settings.json
+
+# JetBrains
+.idea
+
+earthref.ssl.key
+
+# Mac System Files
+*.DS_Store
+
