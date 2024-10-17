@@ -599,7 +599,7 @@ export default class UploadContribution extends React.Component {
         onNotReady={() => {
           this.files[i].importErrors = this.files[i].importErrors || [];
           this.files[i].importErrors[j] = [{}];
-          this.files[i].nImportErrors = _.reduce(this.files[i].importErrors, (n, tableErrors) => n + tableErrors.length, 0)
+          this.files[i].nImportErrors = _.reduce(this.files[i].importErrors, (n, tableErrors) => n + (tableErrors && tableErrors.length || 0), 0)
           this.setState({
             totalImportErrors: _.reduce(this.files, (n, file) => n + file.nImportErrors, 0),
             importProgressTaps: this.state.importProgressTaps + 1

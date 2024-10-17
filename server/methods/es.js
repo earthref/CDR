@@ -773,7 +773,7 @@ export default function () {
             }
           }
         });
-        // console.log("esGetContribution", index, id, resp.body.hits);
+        console.log("esGetContribution", index, id, resp.body.hits);
         if (resp.body.hits.total.value > 0 && resp.body.hits.hits[0]._source.contribution && _.isPlainObject(resp.body.hits.hits[0]._source.contribution.contribution))
           resp.body.hits.hits[0]._source.contribution.contribution = [resp.body.hits.hits[0]._source.contribution.contribution];
         return resp.body.hits.total.value > 0 && resp.body.hits.hits[0]._source.contribution;

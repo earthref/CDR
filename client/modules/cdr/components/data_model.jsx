@@ -236,21 +236,26 @@ class DataModel extends React.Component {
     return (
       <div className="data-model">
         <div className="ui top attached tabular menu">
-          <div className="disabled item"><b>Version:</b></div>
-          {versions.slice().reverse().map((v,i) => {
-            const classes = (v === version ? 'active ' : '') + 'item';
-            return (
-              <Link key={i} className={classes} to={`/CDR/data-models/${v}`}>
-                {v}
-                {(v === version ?
-                  <div
-                    ref="count"
-                    className="ui circular small basic floating label data-model-count"
-                  ></div>
-                : undefined)}
-              </Link>
-            );
-          })}
+          <div className="disabled item">
+            <b>Version:</b>
+          </div>
+          {versions
+            .slice()
+            .reverse()
+            .map((v, i) => {
+              const classes = (v === version ? "active " : "") + "item";
+              return (
+                <Link key={i} className={classes} to={`/CDR/data-models/${v}`}>
+                  {v}
+                  {v === version ? (
+                    <div
+                      ref="count"
+                      className="ui circular small basic floating label data-model-count"
+                    ></div>
+                  ) : undefined}
+                </Link>
+              );
+            })}
           <div className="right menu">
             <div className="active item">
               <div className="ui search">
@@ -263,10 +268,14 @@ class DataModel extends React.Component {
                     value={this.state.search}
                     onChange={this.onSearchChange.bind(this)}
                   />
-                  { this.state.search ?
-                    <i className={portals['CDR'].color + ' close link icon'} onClick={this.clearSearch.bind(this)}/>:
-                    <i className={portals['CDR'].color + ' search icon'}/>
-                  }
+                  {this.state.search ? (
+                    <i
+                      className={portals["CDR"].color + " close link icon"}
+                      onClick={this.clearSearch.bind(this)}
+                    />
+                  ) : (
+                    <i className={portals["CDR"].color + " search icon"} />
+                  )}
                 </div>
                 <div className="results"></div>
               </div>
@@ -279,75 +288,88 @@ class DataModel extends React.Component {
           </div>
           <div className="ui grid">
             <div className="six wide column">
-              <b>
-                Click on a table/group/column name:
-              </b>
+              <b>Click on a table/group/column name:</b>
             </div>
             <div className="four wide column">
-              {(model.updated_day ?
-                <span>
-                  Updated on {updated}.
-                </span> :
-                <span style={{color:'#912d2b !important'}}>
+              {model.updated_day ? (
+                <span>Updated on {updated}.</span>
+              ) : (
+                <span style={{ color: "#912d2b !important" }}>
                   This data model has not been published yet and may change.
                 </span>
               )}
             </div>
             <div className="right aligned six wide column">
               <a href="#" onClick={this.downloadJSON.bind(this)}>
-              <i className="download icon"/>
-              Download as .json</a> | <a href="https://docs.google.com/spreadsheets/d/1ldYzO6WMyxfVT6gv3imKaZIVqvp97uPmWijT_ElpZnY">View/Comment via Google Sheet</a>
+                <i className="download icon" />
+                Download as .json
+              </a>{" "}
+              |{" "}
+              <a href="https://docs.google.com/spreadsheets/d/yannKSL1G02XZYGR9Kxn0bW2SMZk889uhQBw0hR0">
+                View/Comment via Google Sheet
+              </a>
             </div>
           </div>
           <div ref="accordion" className="ui styled fluid accordion">
-            {this.tablesList(version).map((t,i) => {
-              if (this.state.loaded) return (
-                <div className="data-model-table" key={i}>
-                  <div className="title">
-                    <i className="dropdown icon"/>
-                    <span>
-                      {model.tables[t].position + '.'}</span>
-                    <span>
-                      {model.tables[t].label}
-                      <span className="table">, {t}</span>
-                    </span>
-                    <div className="ui circular small basic label data-model-table-count">
-                      {_.keys(model.tables[t].columns).length}
+            {this.tablesList(version).map((t, i) => {
+              if (this.state.loaded)
+                return (
+                  <div className="data-model-table" key={i}>
+                    <div className="title">
+                      <i className="dropdown icon" />
+                      <span>{model.tables[t].position + "."}</span>
+                      <span>
+                        {model.tables[t].label}
+                        <span className="table">, {t}</span>
+                      </span>
+                      <div className="ui circular small basic label data-model-table-count">
+                        {_.keys(model.tables[t].columns).length}
+                      </div>
+                      <span className="description">
+                        {model.tables[t].description}
+                      </span>
                     </div>
-                    <span className="description">{model.tables[t].description}</span>
-                  </div>
-                  <div className="content">
-                    {this.groupsList(version, t).map((g,j) => {
-                      const columns = this.columnsList(version, t, g);
-                      return (
-                        <div className="data-model-group" key={j}>
-                          <div className={(j === 0 ? 'active ' : '') + 'title group-title'}>
-                            <i className="dropdown icon"/>
-                            {g} Group
-                            <div className="ui circular small basic label data-model-group-count">
-                              {columns.length}
+                    <div className="content">
+                      {this.groupsList(version, t).map((g, j) => {
+                        const columns = this.columnsList(version, t, g);
+                        return (
+                          <div className="data-model-group" key={j}>
+                            <div
+                              className={
+                                (j === 0 ? "active " : "") + "title group-title"
+                              }
+                            >
+                              <i className="dropdown icon" />
+                              {g} Group
+                              <div className="ui circular small basic label data-model-group-count">
+                                {columns.length}
+                              </div>
+                              <span className="description"></span>
                             </div>
-                            <span className="description"></span>
+                            <div
+                              className={(j === 0 ? "active " : "") + "content"}
+                            >
+                              {columns.map((c, k) => {
+                                return (
+                                  <div className="data-model-column" key={k}>
+                                    {this.cachedDataModelColumn(t, c)}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div className={(j === 0 ? 'active ' : '') + 'content'}>
-                            {columns.map((c,k) => {
-                              return (
-                                <div className="data-model-column" key={k}>
-                                  {(this.cachedDataModelColumn(t,c))}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
+                );
             })}
           </div>
         </div>
-        <div ref="no-match-message" className="ui hidden error bottom attached message">
+        <div
+          ref="no-match-message"
+          className="ui hidden error bottom attached message"
+        >
           No columns match your search. Please edit the search string.
         </div>
       </div>
