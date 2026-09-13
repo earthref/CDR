@@ -174,9 +174,9 @@ export default class GoogleMap extends React.Component {
     });
     let purpleCircle = {
       path: 'M 256,480c-84.828,0-153.6-68.157-153.6-152.228c0-84.081, 153.6-359.782, 153.6-359.782s 153.6,275.702, 153.6,359.782C 409.6,411.843, 340.828,480, 256,480z M 255.498,282.245c-26.184,0-47.401,21.043-47.401,46.981c0,25.958, 21.217,46.991, 47.401,46.991c 26.204,0, 47.421-21.033, 47.421-46.991 C 302.92,303.288, 281.702,282.245, 255.498,282.245z',
-      fillColor: '#FFFFFF',
+      fillColor: '#e09f00', // CDR orange
       fillOpacity: 1,
-      strokeColor: '#800080',
+      strokeColor: '#a06f00',
       strokeWeight: 1,
       strokeWidth: 0.5,
       anchor: new google.maps.Point(255.498,-26.204),
@@ -207,7 +207,7 @@ export default class GoogleMap extends React.Component {
     let rect = new google.maps.Rectangle({
       fillColor: '#BBBBBB',
       fillOpacity: 0.35,
-      strokeColor: '#800080',
+      strokeColor: '#e09f00', // CDR orange
       strokeOpacity: 1,
       strokeWeight: 1,
       strokeWidth: 0.5,
