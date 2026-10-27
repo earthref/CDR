@@ -1,60 +1,21 @@
 import _ from "lodash";
 import React from "react";
+import { Modal } from "semantic-ui-react";
 
-const seriesDefs = [
-  { key: "gamma_density", label: "Gamma Density", color: "#1f77b4" },
-  { key: "mag_susc_chi_mass", label: "Mag Susc χmass", color: "#ff7f0e" },
-  { key: "res", label: "Resistivity (ohm-m)", color: "#2ca02c" },
-  { key: "pwave_v", label: "P-wave Velocity (m/s)", color: "#d62728" },
-  { key: "fp", label: "Porosity (frac)", color: "#9467bd" },
-  { key: "k", label: "K (cps)", color: "#8c564b" },
-  { key: "ca", label: "Ca (cps)", color: "#e377c2" },
-  { key: "ti", label: "Ti (cps)", color: "#7f7f7f" },
-  { key: "fe", label: "Fe (cps)", color: "#bcbd22" },
-  { key: "zr", label: "Zr (cps)", color: "#17becf" },
-];
+import { depthPlotSeries as seriesDefs } from "/lib/configs/cdr/depth_plot_series.js";
 
-function toNumber(x) {
-  const n = parseFloat(x);
-  return isNaN(n) ? undefined : n;
-}
+// Fixed width for each measurement-type panel, so every plot has the same panel
+// width regardless of how many series a core has.
+const PANEL_W = 96;
 
-function firstValue(val) {
-  if (_.isArray(val)) return val[0];
-  return val;
-}
-
-function groupByCore(docs) {
-  const grouped = _.groupBy(docs, (d) =>
-    firstValue(_.get(d, "summary.cores.core"))
+// Group raw measurement rows (as returned by esGetMeasurements -> extracted to
+// flat {core, depth, <series>...} rows) by core name, sorted by depth.
+export function groupRowsByCore(rows) {
+  const grouped = _.groupBy(
+    (rows || []).filter((r) => r && r.core != null && _.isNumber(r.depth)),
+    (r) => r.core
   );
-  return _.mapValues(grouped, (rows) =>
-    rows
-      .map((r) => ({
-        section: firstValue(_.get(r, "summary.sections.section")),
-        depth: toNumber(
-          _.get(r, "summary.measurements.mbs_corrected.vals[0]") !== undefined
-            ? _.get(r, "summary.measurements.mbs_corrected.vals[0]")
-            : _.get(r, "summary.measurements.depth.range.gte")
-        ),
-        gamma_density: toNumber(
-          _.get(r, "summary.measurements.gamma_density.vals[0]")
-        ),
-        mag_susc_chi_mass: toNumber(
-          _.get(r, "summary.measurements.mag_susc_chi_mass.vals[0]")
-        ),
-        res: toNumber(_.get(r, "summary.measurements.res.vals[0]")),
-        pwave_v: toNumber(_.get(r, "summary.measurements.pwave_v.vals[0]")),
-        fp: toNumber(_.get(r, "summary.measurements.fp.vals[0]")),
-        k: toNumber(_.get(r, "summary.measurements.k.vals[0]")),
-        ca: toNumber(_.get(r, "summary.measurements.ca.vals[0]")),
-        ti: toNumber(_.get(r, "summary.measurements.ti.vals[0]")),
-        fe: toNumber(_.get(r, "summary.measurements.fe.vals[0]")),
-        zr: toNumber(_.get(r, "summary.measurements.zr.vals[0]")),
-      }))
-      .filter((r) => _.isNumber(r.depth) && r.depth >= 0)
-      .sort((a, b) => a.depth - b.depth)
-  );
+  return _.mapValues(grouped, (rs) => _.sortBy(rs, "depth"));
 }
 
 function extent(nums) {
@@ -72,35 +33,38 @@ function nice(v) {
 function CorePlot({
   core,
   rows,
-  width = 720,
   height = 260,
   padding = 36,
   series = seriesDefs,
+  onClick,
 }) {
   const depths = rows.map((r) => r.depth).filter(_.isNumber);
   if (!depths.length) return null;
   const [dmin, dmaxRaw] = extent(depths);
   const dmax = dmaxRaw === dmin ? dmin + 1 : dmaxRaw;
 
-  const leftAxisW = 56;
-  const topPad = padding;
-  const bottomPad = 44;
-  const y0 = topPad;
-  const y1 = height - bottomPad;
-  const innerW = width - padding - leftAxisW;
-  const xLeft = leftAxisW;
-
-  const yScale = (d) => y0 + ((d - dmin) / (dmax - dmin)) * (y1 - y0);
-
   const activeSeries = series.filter((s) =>
     rows.some((r) => _.isNumber(r[s.key]))
   );
   if (!activeSeries.length) return null;
+
+  const leftAxisW = 56;
   const panelGap = 10;
-  const panelW = Math.max(
-    40,
-    (innerW - panelGap * (activeSeries.length - 1)) / activeSeries.length
-  );
+  const panelW = PANEL_W;
+  // Width is derived from the series count so every panel is a constant width,
+  // rather than stretching to fill a fixed total width.
+  const width =
+    leftAxisW +
+    activeSeries.length * panelW +
+    (activeSeries.length - 1) * panelGap +
+    padding;
+  const topPad = padding;
+  const bottomPad = 44;
+  const y0 = topPad;
+  const y1 = height - bottomPad;
+  const xLeft = leftAxisW;
+
+  const yScale = (d) => y0 + ((d - dmin) / (dmax - dmin)) * (y1 - y0);
 
   const xScales = {};
   activeSeries.forEach((s) => {
@@ -112,7 +76,16 @@ function CorePlot({
   });
 
   return (
-    <div className="core-plot" style={{ margin: "0.5em 0" }}>
+    <div
+      className="core-plot"
+      style={{
+        margin: "0.5em 0",
+        cursor: onClick ? "pointer" : "default",
+        display: "inline-block",
+      }}
+      onClick={onClick}
+      title={onClick ? "Click to view full depth plot" : undefined}
+    >
       <div style={{ fontWeight: "bold", marginBottom: "0.25em" }}>{core}</div>
       <svg width={width} height={height}>
         <rect x={0} y={0} width={width} height={height} fill="white" stroke="#ddd" />
@@ -146,7 +119,7 @@ function CorePlot({
                 {s.label}
               </text>
               {dPath && (
-                <path d={dPath} fill="none" stroke="#e09f00" strokeWidth={1.25} />
+                <path d={dPath} fill="none" stroke={s.color} strokeWidth={1.25} />
               )}
               {/* X-axis ticks and labels */}
               <line x1={px0} y1={y1} x2={px1} y2={y1} stroke="#ddd" />
@@ -195,23 +168,80 @@ function CorePlot({
   );
 }
 
-export default class SearchCorePlots extends React.Component {
+export { CorePlot };
+
+// Renders the depth plots for a single contribution's cores. `rows` are the
+// flat measurement rows for that contribution (fetched lazily by the
+// SearchCorePlotsListItem container); each distinct core gets its own plot.
+export default class CorePlotsListItem extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { modalCore: null };
+  }
+
+  openModal(core) {
+    this.setState({ modalCore: core });
+  }
+
+  closeModal() {
+    this.setState({ modalCore: null });
+  }
+
+  renderModal(byCore) {
+    const core = this.state.modalCore;
+    if (!core || !byCore[core]) return null;
+    return (
+      <Modal
+        open={true}
+        onClose={() => this.closeModal()}
+        style={{ width: "calc(100vw - 6em)" }}
+      >
+        <Modal.Header>
+          <span>Depth Plot — {core}</span>
+          <i
+            className="close icon"
+            onClick={() => this.closeModal()}
+            style={{ cursor: "pointer", float: "right" }}
+          />
+        </Modal.Header>
+        <Modal.Content scrolling style={{ maxHeight: "80vh" }}>
+          <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <CorePlot core={core} rows={byCore[core]} height={640} />
+          </div>
+        </Modal.Content>
+      </Modal>
+    );
+  }
+
   render() {
-    const { docs, loading, maxCores } = this.props;
-    if (loading) return <div className="ui basic segment">Loading plots…</div>;
-    const byCore = groupByCore(docs || []);
-    const cores = _.take(_.keys(byCore).filter(Boolean).sort(), maxCores || 24);
-    if (!cores.length)
+    const { rows, loading, error } = this.props;
+    if (loading)
       return (
-        <div className="ui basic segment">
-          No depth data available for matching cores.
+        <div className="ui basic segment" style={{ minHeight: 80, position: "relative" }}>
+          <div className="ui active inverted dimmer">
+            <div className="ui text loader">Loading plots…</div>
+          </div>
         </div>
       );
+    if (error)
+      return (
+        <div className="ui basic segment">Error loading plots for this core.</div>
+      );
+    const byCore = groupRowsByCore(rows || []);
+    const cores = _.keys(byCore).filter(Boolean).sort();
+    // Hide cores with no depth data entirely rather than showing an empty row.
+    if (!cores.length) return null;
     return (
-      <div style={{ overflow: "auto", padding: "0.5em" }}>
+      <div>
         {cores.map((core) => (
-          <CorePlot key={core} core={core} rows={byCore[core]} />
+          <CorePlot
+            key={core}
+            core={core}
+            rows={byCore[core]}
+            onClick={() => this.openModal(core)}
+          />
         ))}
+        {this.renderModal(byCore)}
       </div>
     );
   }

@@ -15,6 +15,7 @@ import Count from "/client/modules/common/components/count";
 import { Button, Modal } from "semantic-ui-react";
 import { versions, models } from "/lib/configs/cdr/data_models.js";
 import { index } from "/lib/configs/cdr/search_levels.js";
+import { depthPlotSeries } from "/lib/configs/cdr/depth_plot_series.js";
 
 class SearchSummariesListItem extends React.Component {
   constructor(props) {
@@ -72,15 +73,16 @@ class SearchSummariesListItem extends React.Component {
     ) {
       if (item.summary._all.cruise) title = item.summary._all.cruise[0];
     }
-    if (this.props.table === "cores" && item.summary && item.summary._all) {
-      if (item.summary._all.cruise) title = item.summary._all.cruise[0];
-      if (item.summary._all.core)
-        title += " ⇒ <b>" + item.summary._all.core[0] + "</b>";
-    }
-    if (this.props.table === "cores" && item.summary && item.summary._all) {
-      if (item.summary._all.cruise) title = item.summary._all.cruise[0];
-      if (item.summary._all.core)
-        title += " ⇒ <b>" + item.summary._all.core[0] + "</b>";
+    if (this.props.table === "cores" && item.summary) {
+      // The Cores Map view only puts _geo_point in summary._all, so fall back to
+      // the summary.cores object (which the map does load) for the title.
+      const all = item.summary._all || {};
+      const cores = item.summary.cores || {};
+      const cruise =
+        (all.cruise && all.cruise[0]) || (cores.cruise && cores.cruise[0]);
+      const core = (all.core && all.core[0]) || (cores.core && cores.core[0]);
+      if (cruise) title = cruise;
+      if (core) title += " ⇒ <b>" + core + "</b>";
     }
     if (this.props.table === "section" && item.summary && item.summary._all) {
       if (item.summary._all.cruise) title = item.summary._all.cruise[0];
@@ -501,18 +503,9 @@ class SearchSummariesListItem extends React.Component {
   }
 
   _seriesDefs() {
-    return [
-      { key: "gamma_density", label: "Gamma Density", color: "#1f77b4" },
-      { key: "mag_susc_chi_mass", label: "Mag Susc χmass", color: "#ff7f0e" },
-      { key: "res", label: "Resistivity", color: "#2ca02c" },
-      { key: "pwave_v", label: "P-wave V", color: "#d62728" },
-      { key: "fp", label: "Porosity", color: "#9467bd" },
-      { key: "k", label: "K", color: "#8c564b" },
-      { key: "ca", label: "Ca", color: "#e377c2" },
-      { key: "ti", label: "Ti", color: "#7f7f7f" },
-      { key: "fe", label: "Fe", color: "#bcbd22" },
-      { key: "zr", label: "Zr", color: "#17becf" },
-    ];
+    // Shared with the Cores Plots tab so each measurement type keeps a consistent
+    // color across the thumbnail, the modal, and the plots tab.
+    return depthPlotSeries;
   }
 
   renderDepthThumbnailSVG(rows, width = 100, height = 100, padding = 0) {
@@ -590,7 +583,7 @@ class SearchSummariesListItem extends React.Component {
                 fill="none"
                 stroke="#f2f2f2"
               />
-              <path d={d} fill="none" stroke="#e09f00" strokeWidth={1} />
+              <path d={d} fill="none" stroke={s.color} strokeWidth={1} />
               {/* X-axis baseline only — no ticks in thumbnail */}
               <line x1={px0} y1={y1} x2={px1} y2={y1} stroke="#ddd" />
             </g>
@@ -738,7 +731,7 @@ class SearchSummariesListItem extends React.Component {
                   <path
                     d={dPath}
                     fill="none"
-                    stroke="#e09f00"
+                    stroke={s.color}
                     strokeWidth={1.5}
                   />
                 )}
@@ -975,216 +968,37 @@ class SearchSummariesListItem extends React.Component {
     );
   }
 
-  renderGeo(item) {
-    let geologic = [
-      "plate_blocks",
-      "terranes",
-      "geological_province_sections",
-      "tectonic_settings",
-    ];
-    geologic = _.reduce(
-      geologic,
-      (list, column) => {
-        if (item.summary && item.summary._all && item.summary._all[column])
-          list.push(...item.summary._all[column]);
-        return list;
-      },
-      []
-    );
-    let geographic = [
-      "continent_ocean",
-      "country",
-      "ocean_sea",
-      "region",
-      "village_city",
-      "location",
-      "location_type",
-      "location_alternatives",
-    ];
-    geographic = _.reduce(
-      geographic,
-      (list, column) => {
-        if (item.summary && item.summary._all && item.summary._all[column])
-          list.push(...item.summary._all[column]);
-        return list;
-      },
-      []
-    );
-    return geologic.length > 0 || geographic.length > 0 ? (
+  renderRepositoryLinks(item) {
+    // Stopgap: OSU-MGR is currently the only curating repository, so derive its core
+    // link directly from the cruise and core names (OSU-<cruise>-<core>) rather than
+    // reading a stored repository_links field. Once cores are backfilled and other
+    // repositories exist, read item.summary._all.repository_links instead.
+    let cruise = _.get(item, "summary._all.cruise[0]");
+    let core = _.get(item, "summary._all.core[0]");
+    if (!cruise || !core) return undefined;
+    let id = "OSU-" + cruise + "-" + core;
+    let url = "https://osu-mgr.org/" + id;
+    return (
       <div
         style={{
-          minWidth: 125,
-          maxWidth: 125,
+          minWidth: 200,
+          maxWidth: 200,
           marginRight: "1em",
           marginBottom: 5,
           fontSize: "small",
           whiteSpace: "normal",
-        }}
-      >
-        {geologic.length > 0 ? (
-          <span>
-            <b>Geologic:</b>
-            <Clamp lines={geographic.length > 0 ? 2 : 5}>
-              <span>{geologic.join(", ")}</span>
-            </Clamp>
-          </span>
-        ) : undefined}
-        {geographic.length > 0 ? (
-          <span>
-            <b>Geographic:</b>
-            <Clamp lines={geologic.length > 0 ? 2 : 5}>
-              <span>{geographic.join(", ")}</span>
-            </Clamp>
-          </span>
-        ) : undefined}
-      </div>
-    ) : (
-      <div
-        style={{
-          minWidth: 125,
-          maxWidth: 125,
-          marginRight: "1em",
-          marginBottom: 5,
-          fontSize: "small",
-          color: "#AAAAAA",
-          textAlign: "center",
           overflow: "hidden",
           textOverflow: "ellipsis",
-        }}
-      >
-        <br />
-        No
-        <br />
-        <b>Geographic</b>
-        <br />
-        Data
-        <br />
-        <br />
-      </div>
-    );
-  }
-
-  renderGeology(item) {
-    let geologic_classes =
-      item.summary && item.summary._all && item.summary._all.geologic_classes;
-    let geologic_types =
-      item.summary && item.summary._all && item.summary._all.geologic_types;
-    let lithologies =
-      item.summary && item.summary._all && item.summary._all.lithologies;
-    let nDefined = _.without(
-      [geologic_classes, geologic_types, lithologies],
-      undefined
-    ).length;
-    let clampLines = nDefined === 3 ? 1 : nDefined === 2 ? 2 : 5;
-    return (geologic_classes && geologic_classes.length > 0) ||
-      (geologic_types && geologic_types.length > 0) ||
-      (lithologies && lithologies.length > 0) ? (
-      <div
-        style={{
-          minWidth: 125,
-          maxWidth: 125,
-          marginRight: "1em",
-          marginBottom: 5,
-          fontSize: "small",
-          whiteSpace: "normal",
-        }}
-      >
-        {geologic_classes && geologic_classes.length > 0 ? (
-          <span>
-            <b>Class:</b>
-            <Clamp lines={clampLines}>
-              <span>{geologic_classes.join(", ")}</span>
-            </Clamp>
-          </span>
-        ) : undefined}
-        {geologic_types && geologic_types.length > 0 ? (
-          <span>
-            <b>Type:</b>
-            <Clamp lines={clampLines}>
-              <span>{geologic_types.join(", ")}</span>
-            </Clamp>
-          </span>
-        ) : undefined}
-        {lithologies && lithologies.length > 0 ? (
-          <span>
-            <b>Lithology:</b>
-            <Clamp lines={clampLines}>
-              <span>{lithologies.join(", ")}</span>
-            </Clamp>
-          </span>
-        ) : undefined}
-      </div>
-    ) : (
-      <div
-        style={{
-          minWidth: 125,
-          maxWidth: 125,
-          marginRight: "1em",
-          marginBottom: 5,
-          fontSize: "small",
-          color: "#AAAAAA",
-          textAlign: "center",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        <br />
-        No
-        <br />
-        <b>Geologic</b>
-        <br />
-        Data
-        <br />
-        <br />
-      </div>
-    );
-  }
-
-  renderMethodCodes(item) {
-    return item.summary._all &&
-      item.summary._all.method_codes &&
-      item.summary._all.method_codes.length > 0 ? (
-      <div
-        style={{
-          minWidth: 125,
-          maxWidth: 125,
-          marginRight: "1em",
-          marginBottom: 5,
-          fontSize: "small",
-          whiteSpace: "normal",
         }}
       >
         <span>
-          <b>Method Codes:</b>
-          <Clamp lines={5}>
-            <span>{item.summary._all.method_codes.join(", ")}</span>
-          </Clamp>
+          <b>Repository:</b>
+          <p style={{ marginBottom: 0 }}>
+            <a style={this.styles.a} href={url} target="_blank">
+              {id}
+            </a>
+          </p>
         </span>
-      </div>
-    ) : (
-      <div
-        style={{
-          minWidth: 125,
-          maxWidth: 125,
-          marginRight: "1em",
-          marginBottom: 5,
-          fontSize: "small",
-          color: "#AAAAAA",
-          textAlign: "center",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        <br />
-        No
-        <br />
-        <b>
-          Method
-          <br />
-          Codes
-        </b>
-        <br />
-        <br />
       </div>
     );
   }
@@ -1817,9 +1631,7 @@ class SearchSummariesListItem extends React.Component {
                     {this.renderCounts(item)}
                     {this.renderMapThumbnail(item)}
                     {this.renderDepthPlots(item)}
-                    {this.renderGeo(item)}
-                    {this.renderGeology(item)}
-                    {this.renderMethodCodes(item)}
+                    {this.renderRepositoryLinks(item)}
                   </div>
                 ) : (
                   <div

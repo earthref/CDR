@@ -9,7 +9,8 @@ import SearchFiltersBuckets from "/client/modules/common/containers/search_filte
 import SearchFiltersExists from "/client/modules/common/containers/search_filters_exists";
 import SearchSummariesView from "/client/modules/cdr/components/search_summaries_view";
 import SearchRowsView from "/client/modules/cdr/containers/search_rows_view";
-import SearchCorePlots from "/client/modules/cdr/containers/search_core_plots";
+import SearchCorePlots from "/client/modules/cdr/components/search_core_plots_view";
+import SearchCoresMapView from "/client/modules/cdr/components/search_cores_map";
 import SearchDownload from "/client/modules/cdr/components/search_download";
 import SearchJSONLD from "/client/modules/cdr/containers/search_jsonld";
 import { portals } from "/lib/configs/portals.js";
@@ -126,8 +127,91 @@ class Search extends React.Component {
         },
       },
     },
+    // CDR-specific bucket filters. Each aggregates on a .raw keyword sub-field of
+    // the summarized column; confirm the index mapping exposes .raw for each field.
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.cruise",
+      title: "Cruise/Expedition",
+      term: "summary._all.cruise.raw",
+      aggs: {
+        buckets: { terms: { field: "summary._all.cruise.raw", size: 10000 } },
+      },
+    },
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.method",
+      title: "Coring Method",
+      term: "summary._all.method.raw",
+      aggs: {
+        buckets: { terms: { field: "summary._all.method.raw", size: 10000 } },
+      },
+    },
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.material",
+      title: "Core Material",
+      term: "summary._all.material.raw",
+      aggs: {
+        buckets: { terms: { field: "summary._all.material.raw", size: 10000 } },
+      },
+    },
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.research_vessel",
+      title: "Research Vessel",
+      term: "summary._all.research_vessel.raw",
+      aggs: {
+        buckets: {
+          terms: { field: "summary._all.research_vessel.raw", size: 10000 },
+        },
+      },
+    },
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.pis",
+      title: "Principal Investigator",
+      term: "summary._all.pis.raw",
+      aggs: {
+        buckets: { terms: { field: "summary._all.pis.raw", size: 10000 } },
+      },
+    },
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.lab_names",
+      title: "Lab",
+      term: "summary._all.lab_names.raw",
+      aggs: {
+        buckets: { terms: { field: "summary._all.lab_names.raw", size: 10000 } },
+      },
+    },
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.method_codes",
+      title: "Method Codes",
+      term: "summary._all.method_codes.raw",
+      aggs: {
+        buckets: {
+          terms: { field: "summary._all.method_codes.raw", size: 10000 },
+        },
+      },
+    },
+    {
+      render: this.renderBucketsFilter.bind(this),
+      name: "summary._all.instrument_codes",
+      title: "Instrument Codes",
+      term: "summary._all.instrument_codes.raw",
+      aggs: {
+        buckets: {
+          terms: { field: "summary._all.instrument_codes.raw", size: 10000 },
+        },
+      },
+    },
     //{ render: this.renderGeospatialFilter.bind(this)     , defaultOpen: true , name: 'geospatial' },
-    { render: this.renderAgeFilter.bind(this), defaultOpen: true, name: "age" },
+    // Age filter disabled: the CDR data model has no age / age_low / age_high /
+    // age_unit columns, so summary._all._age_range_ybp is never populated and the
+    // filter always shows an empty range. Re-enable if age columns are added.
+    // { render: this.renderAgeFilter.bind(this), defaultOpen: true, name: "age" },
     //{ render: this.renderPoleFilter.bind(this)           , defaultOpen: false, name: 'pole' },
     //{ render: this.renderVGPFilter.bind(this)            , defaultOpen: false, name: 'VGP' },
     //  { render: this.renderIntensityFilter.bind(this)      , defaultOpen: false, name: 'intensity' },
@@ -145,54 +229,42 @@ class Search extends React.Component {
         },
       },
     },
-    {
-      render: this.renderBucketsFilter.bind(this),
-      name: "summary._all.location_type",
-      title: "Location Type",
-      term: "summary._all.location_type.raw",
-      aggs: {
-        buckets: {
-          terms: { field: "summary._all.location_type.raw", size: 10000 },
-        },
-      },
-      cv: cvs.location_type.items.map((x) => x.item),
-    },
-    {
-      render: this.renderBucketsFilter.bind(this),
-      name: "summary._all.geologic_type",
-      title: "Geologic Type",
-      term: "summary._all.geologic_types.raw",
-      aggs: {
-        buckets: {
-          terms: { field: "summary._all.geologic_types.raw", size: 10000 },
-        },
-      },
-      cv: cvs.type.items.map((x) => x.item),
-    },
-    {
-      render: this.renderBucketsFilter.bind(this),
-      name: "summary._all.geologic_class",
-      title: "Geologic Class",
-      term: "summary._all.geologic_classes.raw",
-      aggs: {
-        buckets: {
-          terms: { field: "summary._all.geologic_classes.raw", size: 10000 },
-        },
-      },
-      cv: cvs.class.items.map((x) => x.item),
-    },
-    {
-      render: this.renderBucketsFilter.bind(this),
-      name: "summary._all.lithology",
-      title: "Lithology",
-      term: "summary._all.lithologies.raw",
-      aggs: {
-        buckets: {
-          terms: { field: "summary._all.lithologies.raw", size: 10000 },
-        },
-      },
-      cv: cvs.lithology.items.map((x) => x.item),
-    },
+    // The following four filters are disabled: location_type, geologic_types,
+    // geologic_classes, and lithologies are MagIC fields that do not exist in the
+    // CDR data model, so these aggregations always return no buckets. Re-enable
+    // (and confirm the .raw mappings) if the corresponding columns are added.
+    // {
+    //   render: this.renderBucketsFilter.bind(this),
+    //   name: "summary._all.location_type",
+    //   title: "Location Type",
+    //   term: "summary._all.location_type.raw",
+    //   aggs: { buckets: { terms: { field: "summary._all.location_type.raw", size: 10000 } } },
+    //   cv: cvs.location_type.items.map((x) => x.item),
+    // },
+    // {
+    //   render: this.renderBucketsFilter.bind(this),
+    //   name: "summary._all.geologic_type",
+    //   title: "Geologic Type",
+    //   term: "summary._all.geologic_types.raw",
+    //   aggs: { buckets: { terms: { field: "summary._all.geologic_types.raw", size: 10000 } } },
+    //   cv: cvs.type.items.map((x) => x.item),
+    // },
+    // {
+    //   render: this.renderBucketsFilter.bind(this),
+    //   name: "summary._all.geologic_class",
+    //   title: "Geologic Class",
+    //   term: "summary._all.geologic_classes.raw",
+    //   aggs: { buckets: { terms: { field: "summary._all.geologic_classes.raw", size: 10000 } } },
+    //   cv: cvs.class.items.map((x) => x.item),
+    // },
+    // {
+    //   render: this.renderBucketsFilter.bind(this),
+    //   name: "summary._all.lithology",
+    //   title: "Lithology",
+    //   term: "summary._all.lithologies.raw",
+    //   aggs: { buckets: { terms: { field: "summary._all.lithologies.raw", size: 10000 } } },
+    //   cv: cvs.lithology.items.map((x) => x.item),
+    // },
     {
       render: this.renderBucketsFilter.bind(this),
       name: "summary._all.scientists",
@@ -2254,11 +2326,11 @@ class Search extends React.Component {
               <Count
                 es={_.extend({}, view.es, {
                   queries:
-                    view.name === "Map"
+                    view.name === "Map" || view.name === "Cores Map"
                       ? _.concat(searchQueries, {
                           exists: {
                             field:
-                              this.state.levelNumber < 2
+                              view.name === "Map" && this.state.levelNumber < 2
                                 ? "summary._all._geo_envelope"
                                 : "summary._all._geo_point",
                           },
@@ -2370,6 +2442,16 @@ class Search extends React.Component {
       return (
         <SearchCorePlots
           key={this.state.levelNumber + "_" + activeView.name}
+          style={viewStyle}
+          es={es}
+          pageSize={5}
+        />
+      );
+    if (activeView.name === "Cores Map")
+      return (
+        <SearchCoresMapView
+          key={this.state.levelNumber + "_" + activeView.name}
+          style={viewStyle}
           es={es}
         />
       );

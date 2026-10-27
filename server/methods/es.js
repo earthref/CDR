@@ -2195,8 +2195,25 @@ export default function () {
           },
         });
         if (resp.body.hits.total.value === 0) return [];
-          return resp.body.hits.hits[0]._source.contribution.measurements || [];  
-        
+        const contribution =
+          resp.body.hits.hits[0]._source.contribution || {};
+        const measurements = contribution.measurements || [];
+        // Measurement rows carry `section` but not `core`; join through the
+        // sections table (section name is the unique key) so callers can group
+        // measurements by core. Without this, `core` is undefined on every row
+        // and the Cores Plots view has nothing to group. Leaves `core` untouched
+        // when a measurement's section can't be mapped.
+        const sectionToCore = {};
+        (contribution.sections || []).forEach((s) => {
+          if (s && s.section != null && s.core != null)
+            sectionToCore[s.section] = s.core;
+        });
+        return measurements.map((m) =>
+          m && m.core == null && m.section != null && sectionToCore[m.section] != null
+            ? { ...m, core: sectionToCore[m.section] }
+            : m
+        );
+
       } catch (error) {
         console.error("esGetMeasurements", index, cid, error.message);
         throw new Meteor.Error("esGetMeasurements", error.message);
