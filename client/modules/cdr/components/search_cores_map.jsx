@@ -4,6 +4,7 @@ import "echarts-gl";
 import ReactECharts from "echarts-for-react";
 import { Button } from "semantic-ui-react";
 import SearchSummariesListItem from "/client/modules/cdr/containers/search_summaries_list_item";
+import assetUrl from "/client/lib/asset_url";
 
 // Default and selected marker colors for core locations on the globe.
 // Default markers use the CDR orange; the selected marker stays a contrasting
@@ -130,7 +131,7 @@ export default function SearchCoresMap({ style, es }) {
   const globeOption = {
     backgroundColor: "#FFF",
     globe: {
-      baseTexture: "/CDR/global_relief_map.jpg",
+      baseTexture: assetUrl("/CDR/global_relief_map.jpg"),
       shading: "lambert",
       viewControl: {
         autoRotate: false,
